@@ -41,3 +41,7 @@ pids
 .env.test.local
 .env.production.local
 
+# Large video files (use Git LFS if needed)
+*.mov
+*.mp4
+
