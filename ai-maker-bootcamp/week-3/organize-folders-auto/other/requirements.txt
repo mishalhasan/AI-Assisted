@@ -1,0 +1,7 @@
+# No packages required for basic file organization
+# This script uses only Python standard library (os, shutil, pathlib)
+
+# Optional packages for enhanced features (not required):
+# python-magic==0.4.27  # For more robust file type detection based on file content
+# filetype==1.2.0       # Alternative for file type detection
+

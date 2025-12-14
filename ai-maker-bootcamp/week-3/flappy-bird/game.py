@@ -739,7 +739,32 @@ class Game:
                         slider_width = self.volume_slider_rect.width
                         new_volume = max(0.0, min(1.0, slider_x / slider_width))
                         self.set_volume(new_volume)
-                    # Check start button first (before dropdown) to ensure it works when dropdown is open
+                    # Check dropdown options FIRST to prevent start button from being triggered
+                    elif self.state == "start" and self.level_dropdown_rect and self.dropdown_open:
+                        # Check if clicking on a dropdown option
+                        level_selected = False
+                        for i, option_rect in enumerate(self.level_option_rects):
+                            if option_rect.collidepoint(mouse_x, mouse_y):
+                                self.current_level = i
+                                self.level_config = self.config['levels'][self.current_level]
+                                self.dropdown_open = False
+                                level_selected = True
+                                break
+                        
+                        # If clicked on dropdown button, toggle it
+                        if not level_selected and self.level_dropdown_rect.collidepoint(mouse_x, mouse_y):
+                            self.dropdown_open = False
+                        # If clicked outside dropdown area, close it
+                        elif not level_selected:
+                            clicked_in_dropdown_area = False
+                            for option_rect in self.level_option_rects:
+                                if option_rect.collidepoint(mouse_x, mouse_y):
+                                    clicked_in_dropdown_area = True
+                                    break
+                            
+                            if not clicked_in_dropdown_area:
+                                self.dropdown_open = False
+                    # Check start button (only if dropdown option wasn't clicked)
                     elif self.state == "start":
                         button_rect = pygame.Rect(self.screen_width // 2 - 120, 
                                                  self.screen_height // 2 + 30, 
@@ -749,36 +774,11 @@ class Game:
                             if self.dropdown_open:
                                 self.dropdown_open = False
                             self.start_game()
-                        # Check level dropdown (only if not clicking start button)
-                        elif self.level_dropdown_rect:
-                            if self.dropdown_open:
-                                # Check if clicking on an option
-                                level_selected = False
-                                for i, option_rect in enumerate(self.level_option_rects):
-                                    if option_rect.collidepoint(mouse_x, mouse_y):
-                                        self.current_level = i
-                                        self.level_config = self.config['levels'][self.current_level]
-                                        self.dropdown_open = False
-                                        level_selected = True
-                                        break
-                                
-                                # If clicked on dropdown button, toggle it
-                                if not level_selected and self.level_dropdown_rect.collidepoint(mouse_x, mouse_y):
-                                    self.dropdown_open = False
-                                # If clicked outside dropdown area, close it
-                                elif not level_selected:
-                                    clicked_in_dropdown_area = False
-                                    for option_rect in self.level_option_rects:
-                                        if option_rect.collidepoint(mouse_x, mouse_y):
-                                            clicked_in_dropdown_area = True
-                                            break
-                                    
-                                    if not clicked_in_dropdown_area:
-                                        self.dropdown_open = False
-                            else:
-                                # Open dropdown if clicking on button
-                                if self.level_dropdown_rect.collidepoint(mouse_x, mouse_y):
-                                    self.dropdown_open = True
+                        # Check level dropdown button (only if not clicking start button and dropdown not open)
+                        elif self.level_dropdown_rect and not self.dropdown_open:
+                            # Open dropdown if clicking on button
+                            if self.level_dropdown_rect.collidepoint(mouse_x, mouse_y):
+                                self.dropdown_open = True
                     # Check level dropdown for gameover state
                     elif self.state == "gameover" and self.level_dropdown_rect:
                         if self.dropdown_open:
@@ -920,10 +920,7 @@ class Game:
             # Try to spawn a coin in a safe location (preferably in pipe gaps)
             coin_size = self.config.get('coin_size', 30)
             bird_size = self.config['bird_size']
-            # Clearance needed: bird_size (Mario) + coin_size + padding on both sides
-            clearance_padding = 30  # Extra space for safe collection
-            min_gap_height = bird_size + coin_size + (clearance_padding * 2)
-            safe_margin = 50  # Distance from pipe edges
+            # Adaptive clearance padding - smaller gaps need less padding
             max_attempts = 40  # More attempts to find a good spot
             coin_spawned = False
             
@@ -933,6 +930,17 @@ class Game:
                 if wall.x > self.screen_width - 300:  # Only consider walls that are coming soon
                     gap_top, gap_bottom = wall.get_gap_area()
                     gap_height = gap_bottom - gap_top
+                    
+                    # Adaptive clearance padding based on gap size
+                    if gap_height >= 250:
+                        clearance_padding = 25  # Easy level - more padding
+                    elif gap_height >= 230:
+                        clearance_padding = 20  # Medium level - moderate padding
+                    else:
+                        clearance_padding = 15  # Hard level - minimal padding
+                    
+                    # Minimum gap height with adaptive padding
+                    min_gap_height = bird_size + coin_size + (clearance_padding * 2)
                     
                     # Gap must be large enough for Mario + coin + clearance
                     if gap_height >= min_gap_height:
@@ -944,27 +952,32 @@ class Game:
                         if safe_bottom - safe_top >= coin_size + bird_size:
                             # Spawn in center of safe area
                             safe_center = (safe_top + safe_bottom) // 2
-                            gap_positions.append((safe_center, wall.x, gap_top, gap_bottom))
+                            gap_positions.append((safe_center, wall.x, gap_top, gap_bottom, gap_height, clearance_padding))
             
             # Try gap positions first
-            for coin_y, wall_x, gap_top, gap_bottom in gap_positions:
+            for coin_y, wall_x, gap_top, gap_bottom, gap_height, clearance_padding in gap_positions:
                 coin_x = self.screen_width
                 
-                # Verify coin is well within gap with clearance
+                # Coin is already positioned in safe area (between safe_top and safe_bottom)
+                # which accounts for clearance_padding, so we don't need additional safe_margin checks
                 coin_top = coin_y - coin_size // 2
                 coin_bottom = coin_y + coin_size // 2
                 
-                # Check clearance from pipe edges
-                if (coin_top < gap_top + safe_margin or 
-                    coin_bottom > gap_bottom - safe_margin):
-                    continue  # Too close to pipe edges
+                # Verify coin is within the safe area we calculated
+                safe_top = gap_top + clearance_padding
+                safe_bottom = gap_bottom - clearance_padding
+                
+                if coin_top < safe_top or coin_bottom > safe_bottom:
+                    continue  # Coin outside safe area
                 
                 # Check if Mario can collect it safely (Mario above and below coin)
+                # Use the gap boundaries for space calculation
                 mario_top_space = coin_top - gap_top
                 mario_bottom_space = gap_bottom - coin_bottom
                 
-                if mario_top_space < bird_size + clearance_padding or \
-                   mario_bottom_space < bird_size + clearance_padding:
+                # Need at least bird_size space on each side for Mario to collect
+                # Reduced requirement - just need bird_size, not bird_size + padding
+                if mario_top_space < bird_size or mario_bottom_space < bird_size:
                     continue  # Not enough space for Mario to collect
                 
                 # Check if this position is safe from enemies
@@ -972,9 +985,10 @@ class Game:
                                            coin_size, coin_size)
                 
                 too_close_to_enemy = False
+                enemy_safe_margin = 40  # Fixed margin for enemy checking
                 for enemy in self.enemies:
                     if enemy.rect:
-                        enemy_check_rect = enemy.rect.inflate(safe_margin * 2, safe_margin * 2)
+                        enemy_check_rect = enemy.rect.inflate(enemy_safe_margin * 2, enemy_safe_margin * 2)
                         if temp_coin_rect.colliderect(enemy_check_rect):
                             too_close_to_enemy = True
                             break
@@ -1012,7 +1026,7 @@ class Game:
                     coin_spawned = True
                     break
             
-            # If no gap position worked, try random positions with very strict checks
+            # If no gap position worked, try random positions with adaptive checks
             if not coin_spawned:
                 for attempt in range(max_attempts):
                     coin_y = random.randint(150, self.screen_height - 150)
@@ -1021,11 +1035,20 @@ class Game:
                     coin_top = coin_y - coin_size // 2
                     coin_bottom = coin_y + coin_size // 2
                     
-                    # Check collision with walls/pipes with strict clearance
+                    # Check collision with walls/pipes with adaptive clearance
                     too_close_to_wall = False
                     for wall in self.walls:
                         top_rect, bottom_rect = wall.get_rects()
                         gap_top, gap_bottom = wall.get_gap_area()
+                        gap_height = gap_bottom - gap_top
+                        
+                        # Adaptive clearance padding based on gap size
+                        if gap_height >= 250:
+                            adaptive_clearance = 25
+                        elif gap_height >= 230:
+                            adaptive_clearance = 20
+                        else:
+                            adaptive_clearance = 15
                         
                         # Check if coin overlaps with pipes
                         coin_rect = pygame.Rect(coin_x - coin_size // 2, coin_y - coin_size // 2, 
@@ -1034,18 +1057,19 @@ class Game:
                             too_close_to_wall = True
                             break
                         
-                        # If coin is in gap, check clearance
+                        # If coin is in gap, check clearance with adaptive padding
                         if gap_top < coin_y < gap_bottom:
-                            if (coin_top < gap_top + safe_margin or 
-                                coin_bottom > gap_bottom - safe_margin):
+                            safe_top = gap_top + adaptive_clearance
+                            safe_bottom = gap_bottom - adaptive_clearance
+                            
+                            if coin_top < safe_top or coin_bottom > safe_bottom:
                                 too_close_to_wall = True
                                 break
                             
-                            # Check Mario clearance
+                            # Check Mario clearance - just need bird_size on each side
                             mario_top_space = coin_top - gap_top
                             mario_bottom_space = gap_bottom - coin_bottom
-                            if mario_top_space < bird_size + clearance_padding or \
-                               mario_bottom_space < bird_size + clearance_padding:
+                            if mario_top_space < bird_size or mario_bottom_space < bird_size:
                                 too_close_to_wall = True
                                 break
                     
@@ -1058,6 +1082,15 @@ class Game:
                         if wall.x > coin_x - 500:  # Check walls in coin's path
                             top_rect, bottom_rect = wall.get_rects()
                             gap_top, gap_bottom = wall.get_gap_area()
+                            gap_height = gap_bottom - gap_top
+                            
+                            # Adaptive clearance padding for path checking
+                            if gap_height >= 250:
+                                path_clearance = 25
+                            elif gap_height >= 230:
+                                path_clearance = 20
+                            else:
+                                path_clearance = 15
                             
                             # Check multiple positions along coin's path
                             for check_x in range(int(coin_x), int(coin_x - 400), -20):
@@ -1067,12 +1100,13 @@ class Game:
                                     will_be_blocked = True
                                     break
                                 
-                                # If in gap, check clearance
+                                # If in gap, check clearance with adaptive padding
                                 if gap_top < coin_y < gap_bottom:
+                                    safe_top = gap_top + path_clearance
+                                    safe_bottom = gap_bottom - path_clearance
                                     future_top = coin_y - coin_size // 2
                                     future_bottom = coin_y + coin_size // 2
-                                    if (future_top < gap_top + safe_margin or 
-                                        future_bottom > gap_bottom - safe_margin):
+                                    if future_top < safe_top or future_bottom > safe_bottom:
                                         will_be_blocked = True
                                         break
                             
@@ -1084,9 +1118,10 @@ class Game:
                     
                     # Check collision with enemies
                     too_close_to_enemy = False
+                    enemy_safe_margin = 40  # Fixed margin for enemy checking
                     for enemy in self.enemies:
                         if enemy.rect:
-                            enemy_check_rect = enemy.rect.inflate(safe_margin * 2, safe_margin * 2)
+                            enemy_check_rect = enemy.rect.inflate(enemy_safe_margin * 2, enemy_safe_margin * 2)
                             coin_rect = pygame.Rect(coin_x - coin_size // 2, coin_y - coin_size // 2, 
                                                   coin_size, coin_size)
                             if coin_rect.colliderect(enemy_check_rect):
@@ -1117,8 +1152,6 @@ class Game:
             
             coin_size = self.config.get('coin_size', 30)
             bird_size = self.config['bird_size']
-            clearance_padding = 30
-            safe_margin = 50
             cluster_size = random.randint(3, 5)  # 3-5 coins per cluster
             coin_spacing = coin_size + 15  # Spacing between coins in cluster
             cluster_spawned = False
@@ -1129,6 +1162,14 @@ class Game:
                 if wall.x > self.screen_width - 300:
                     gap_top, gap_bottom = wall.get_gap_area()
                     gap_height = gap_bottom - gap_top
+                    
+                    # Adaptive clearance padding based on gap size
+                    if gap_height >= 250:
+                        clearance_padding = 25  # Easy level - more padding
+                    elif gap_height >= 230:
+                        clearance_padding = 20  # Medium level - moderate padding
+                    else:
+                        clearance_padding = 15  # Hard level - minimal padding
                     
                     # Need enough space for cluster (cluster height + Mario clearance)
                     cluster_height = (cluster_size - 1) * coin_spacing + coin_size
@@ -1142,28 +1183,33 @@ class Game:
                         if safe_bottom - safe_top >= cluster_height + bird_size:
                             # Center of safe area
                             safe_center = (safe_top + safe_bottom) // 2
-                            gap_positions.append((safe_center, wall.x, gap_top, gap_bottom, gap_height))
+                            gap_positions.append((safe_center, wall.x, gap_top, gap_bottom, gap_height, clearance_padding))
             
             # Try to spawn cluster in gaps
-            for cluster_y, wall_x, gap_top, gap_bottom, gap_height in gap_positions:
+            for cluster_y, wall_x, gap_top, gap_bottom, gap_height, clearance_padding in gap_positions:
                 cluster_x = self.screen_width
+                
+                # Cluster is already positioned in safe area (between safe_top and safe_bottom)
+                # which accounts for clearance_padding
+                safe_top = gap_top + clearance_padding
+                safe_bottom = gap_bottom - clearance_padding
                 
                 # Calculate cluster bounds
                 cluster_height = (cluster_size - 1) * coin_spacing + coin_size
                 cluster_top = cluster_y - cluster_height // 2
                 cluster_bottom = cluster_y + cluster_height // 2
                 
-                # Check clearance from pipe edges
-                if (cluster_top < gap_top + safe_margin or 
-                    cluster_bottom > gap_bottom - safe_margin):
+                # Verify cluster is within the safe area
+                if cluster_top < safe_top or cluster_bottom > safe_bottom:
                     continue
                 
                 # Check if Mario can collect safely
+                # Use gap boundaries for space calculation
                 mario_top_space = cluster_top - gap_top
                 mario_bottom_space = gap_bottom - cluster_bottom
                 
-                if mario_top_space < bird_size + clearance_padding or \
-                   mario_bottom_space < bird_size + clearance_padding:
+                # Need at least bird_size space on each side
+                if mario_top_space < bird_size or mario_bottom_space < bird_size:
                     continue
                 
                 # Check if cluster position is safe from enemies
@@ -1171,9 +1217,10 @@ class Game:
                                          coin_size, cluster_height)
                 
                 too_close_to_enemy = False
+                enemy_safe_margin = 40  # Fixed margin for enemy checking
                 for enemy in self.enemies:
                     if enemy.rect:
-                        enemy_check_rect = enemy.rect.inflate(safe_margin * 2, safe_margin * 2)
+                        enemy_check_rect = enemy.rect.inflate(enemy_safe_margin * 2, enemy_safe_margin * 2)
                         if cluster_rect.colliderect(enemy_check_rect):
                             too_close_to_enemy = True
                             break
@@ -1210,7 +1257,7 @@ class Game:
                     cluster_spawned = True
                     break
             
-            # If no gap position worked, try random positions with strict checks
+            # If no gap position worked, try random positions with adaptive checks
             if not cluster_spawned:
                 for attempt in range(20):
                     cluster_y = random.randint(200, self.screen_height - 200)
@@ -1220,11 +1267,20 @@ class Game:
                     cluster_top = cluster_y - cluster_height // 2
                     cluster_bottom = cluster_y + cluster_height // 2
                     
-                    # Check collision with walls/pipes
+                    # Check collision with walls/pipes with adaptive clearance
                     too_close_to_wall = False
                     for wall in self.walls:
                         top_rect, bottom_rect = wall.get_rects()
                         gap_top, gap_bottom = wall.get_gap_area()
+                        gap_height = gap_bottom - gap_top
+                        
+                        # Adaptive clearance padding based on gap size
+                        if gap_height >= 250:
+                            adaptive_clearance = 25
+                        elif gap_height >= 230:
+                            adaptive_clearance = 20
+                        else:
+                            adaptive_clearance = 15
                         
                         cluster_rect = pygame.Rect(cluster_x - coin_size // 2, cluster_top,
                                                  coin_size, cluster_height)
@@ -1232,17 +1288,19 @@ class Game:
                             too_close_to_wall = True
                             break
                         
-                        # If cluster is in gap, check clearance
+                        # If cluster is in gap, check clearance with adaptive padding
                         if gap_top < cluster_y < gap_bottom:
-                            if (cluster_top < gap_top + safe_margin or 
-                                cluster_bottom > gap_bottom - safe_margin):
+                            safe_top = gap_top + adaptive_clearance
+                            safe_bottom = gap_bottom - adaptive_clearance
+                            
+                            if cluster_top < safe_top or cluster_bottom > safe_bottom:
                                 too_close_to_wall = True
                                 break
                             
+                            # Check Mario clearance - just need bird_size on each side
                             mario_top_space = cluster_top - gap_top
                             mario_bottom_space = gap_bottom - cluster_bottom
-                            if mario_top_space < bird_size + clearance_padding or \
-                               mario_bottom_space < bird_size + clearance_padding:
+                            if mario_top_space < bird_size or mario_bottom_space < bird_size:
                                 too_close_to_wall = True
                                 break
                     
@@ -1255,6 +1313,15 @@ class Game:
                         if wall.x > cluster_x - 500:
                             top_rect, bottom_rect = wall.get_rects()
                             gap_top, gap_bottom = wall.get_gap_area()
+                            gap_height = gap_bottom - gap_top
+                            
+                            # Adaptive clearance padding for path checking
+                            if gap_height >= 250:
+                                path_clearance = 25
+                            elif gap_height >= 230:
+                                path_clearance = 20
+                            else:
+                                path_clearance = 15
                             
                             for check_x in range(int(cluster_x), int(cluster_x - 400), -20):
                                 future_cluster_rect = pygame.Rect(check_x - coin_size // 2, cluster_top,
@@ -1264,8 +1331,9 @@ class Game:
                                     break
                                 
                                 if gap_top < cluster_y < gap_bottom:
-                                    if (cluster_top < gap_top + safe_margin or 
-                                        cluster_bottom > gap_bottom - safe_margin):
+                                    safe_top = gap_top + path_clearance
+                                    safe_bottom = gap_bottom - path_clearance
+                                    if cluster_top < safe_top or cluster_bottom > safe_bottom:
                                         will_be_blocked = True
                                         break
                             
@@ -1275,13 +1343,14 @@ class Game:
                     if will_be_blocked:
                         continue
                     
-                    # Check enemies
+                    # Check enemies (use a reasonable fixed margin for enemy checking)
                     too_close_to_enemy = False
                     cluster_rect = pygame.Rect(cluster_x - coin_size // 2, cluster_top,
                                              coin_size, cluster_height)
+                    enemy_safe_margin = 40  # Fixed margin for enemy checking
                     for enemy in self.enemies:
                         if enemy.rect:
-                            enemy_check_rect = enemy.rect.inflate(safe_margin * 2, safe_margin * 2)
+                            enemy_check_rect = enemy.rect.inflate(enemy_safe_margin * 2, enemy_safe_margin * 2)
                             if cluster_rect.colliderect(enemy_check_rect):
                                 too_close_to_enemy = True
                                 break
@@ -1311,10 +1380,7 @@ class Game:
             # Try to spawn a fireball collectible in a safe location (preferably in pipe gaps)
             fireball_size = self.config.get('fireball_size', 40)
             bird_size = self.config['bird_size']
-            # Clearance needed: bird_size (Mario) + fireball_size + padding on both sides
-            clearance_padding = 30  # Extra space for safe collection
-            min_gap_height = bird_size + fireball_size + (clearance_padding * 2)
-            safe_margin = 50  # Distance from pipe edges
+            # Adaptive clearance padding - smaller gaps need less padding
             max_attempts = 40  # More attempts to find a good spot
             fireball_spawned = False
             
@@ -1324,6 +1390,17 @@ class Game:
                 if wall.x > self.screen_width - 300:  # Only consider walls that are coming soon
                     gap_top, gap_bottom = wall.get_gap_area()
                     gap_height = gap_bottom - gap_top
+                    
+                    # Adaptive clearance padding based on gap size
+                    if gap_height >= 250:
+                        clearance_padding = 25  # Easy level - more padding
+                    elif gap_height >= 230:
+                        clearance_padding = 20  # Medium level - moderate padding
+                    else:
+                        clearance_padding = 15  # Hard level - minimal padding
+                    
+                    # Minimum gap height with adaptive padding
+                    min_gap_height = bird_size + fireball_size + (clearance_padding * 2)
                     
                     # Gap must be large enough for Mario + fireball + clearance
                     if gap_height >= min_gap_height:
@@ -1335,27 +1412,32 @@ class Game:
                         if safe_bottom - safe_top >= fireball_size + bird_size:
                             # Spawn in center of safe area
                             safe_center = (safe_top + safe_bottom) // 2
-                            gap_positions.append((safe_center, wall.x, gap_top, gap_bottom))
+                            gap_positions.append((safe_center, wall.x, gap_top, gap_bottom, gap_height, clearance_padding))
             
             # Try gap positions first
-            for fireball_y, wall_x, gap_top, gap_bottom in gap_positions:
+            for fireball_y, wall_x, gap_top, gap_bottom, gap_height, clearance_padding in gap_positions:
                 fireball_x = self.screen_width
                 
-                # Verify fireball is well within gap with clearance
+                # Fireball is already positioned in safe area (between safe_top and safe_bottom)
+                # which accounts for clearance_padding, so we don't need additional safe_margin checks
                 fireball_top = fireball_y - fireball_size // 2
                 fireball_bottom = fireball_y + fireball_size // 2
                 
-                # Check clearance from pipe edges
-                if (fireball_top < gap_top + safe_margin or 
-                    fireball_bottom > gap_bottom - safe_margin):
-                    continue  # Too close to pipe edges
+                # Verify fireball is within the safe area we calculated
+                safe_top = gap_top + clearance_padding
+                safe_bottom = gap_bottom - clearance_padding
+                
+                if fireball_top < safe_top or fireball_bottom > safe_bottom:
+                    continue  # Fireball outside safe area
                 
                 # Check if Mario can collect it safely (Mario above and below fireball)
+                # Use the gap boundaries for space calculation
                 mario_top_space = fireball_top - gap_top
                 mario_bottom_space = gap_bottom - fireball_bottom
                 
-                if mario_top_space < bird_size + clearance_padding or \
-                   mario_bottom_space < bird_size + clearance_padding:
+                # Need at least bird_size space on each side for Mario to collect
+                # Reduced requirement - just need bird_size, not bird_size + padding
+                if mario_top_space < bird_size or mario_bottom_space < bird_size:
                     continue  # Not enough space for Mario to collect
                 
                 # Check if this position is safe from enemies
@@ -1363,9 +1445,10 @@ class Game:
                                                fireball_size, fireball_size)
                 
                 too_close_to_enemy = False
+                enemy_safe_margin = 40  # Fixed margin for enemy checking
                 for enemy in self.enemies:
                     if enemy.rect:
-                        enemy_check_rect = enemy.rect.inflate(safe_margin * 2, safe_margin * 2)
+                        enemy_check_rect = enemy.rect.inflate(enemy_safe_margin * 2, enemy_safe_margin * 2)
                         if temp_fireball_rect.colliderect(enemy_check_rect):
                             too_close_to_enemy = True
                             break
@@ -1378,6 +1461,17 @@ class Game:
                 for wall in self.walls:
                     if wall.x > fireball_x - 400:  # Check walls that will be near the fireball's path
                         top_rect, bottom_rect = wall.get_rects()
+                        gap_check_top, gap_check_bottom = wall.get_gap_area()
+                        gap_check_height = gap_check_bottom - gap_check_top
+                        
+                        # Adaptive clearance padding for path checking
+                        if gap_check_height >= 250:
+                            path_clearance = 25
+                        elif gap_check_height >= 230:
+                            path_clearance = 20
+                        else:
+                            path_clearance = 15
+                        
                         # Check multiple positions along fireball's path
                         for check_x in range(int(fireball_x), int(fireball_x - 300), -20):
                             future_fireball_rect = pygame.Rect(check_x - fireball_size // 2, fireball_y - fireball_size // 2,
@@ -1385,6 +1479,16 @@ class Game:
                             if future_fireball_rect.colliderect(top_rect) or future_fireball_rect.colliderect(bottom_rect):
                                 will_be_blocked = True
                                 break
+                            
+                            # Check clearance in gap with adaptive padding
+                            if gap_check_top < fireball_y < gap_check_bottom:
+                                safe_top = gap_check_top + path_clearance
+                                safe_bottom = gap_check_bottom - path_clearance
+                                future_top = fireball_y - fireball_size // 2
+                                future_bottom = fireball_y + fireball_size // 2
+                                if future_top < safe_top or future_bottom > safe_bottom:
+                                    will_be_blocked = True
+                                    break
                         if will_be_blocked:
                             break
                     
@@ -1405,7 +1509,7 @@ class Game:
                     fireball_spawned = True
                     break
             
-            # If no gap position worked, try random positions with very strict checks
+            # If no gap position worked, try random positions with adaptive checks
             if not fireball_spawned:
                 for attempt in range(max_attempts):
                     fireball_y = random.randint(150, self.screen_height - 150)
@@ -1414,11 +1518,20 @@ class Game:
                     fireball_top = fireball_y - fireball_size // 2
                     fireball_bottom = fireball_y + fireball_size // 2
                     
-                    # Check collision with walls/pipes with strict clearance
+                    # Check collision with walls/pipes with adaptive clearance
                     too_close_to_wall = False
                     for wall in self.walls:
                         top_rect, bottom_rect = wall.get_rects()
                         gap_top, gap_bottom = wall.get_gap_area()
+                        gap_height = gap_bottom - gap_top
+                        
+                        # Adaptive clearance padding based on gap size
+                        if gap_height >= 250:
+                            adaptive_clearance = 25
+                        elif gap_height >= 230:
+                            adaptive_clearance = 20
+                        else:
+                            adaptive_clearance = 15
                         
                         # Check if fireball overlaps with pipes
                         fireball_rect = pygame.Rect(fireball_x - fireball_size // 2, fireball_y - fireball_size // 2,
@@ -1427,18 +1540,19 @@ class Game:
                             too_close_to_wall = True
                             break
                         
-                        # If fireball is in gap, check clearance
+                        # If fireball is in gap, check clearance with adaptive padding
                         if gap_top < fireball_y < gap_bottom:
-                            if (fireball_top < gap_top + safe_margin or 
-                                fireball_bottom > gap_bottom - safe_margin):
+                            safe_top = gap_top + adaptive_clearance
+                            safe_bottom = gap_bottom - adaptive_clearance
+                            
+                            if fireball_top < safe_top or fireball_bottom > safe_bottom:
                                 too_close_to_wall = True
                                 break
                             
-                            # Check Mario clearance
+                            # Check Mario clearance - just need bird_size on each side
                             mario_top_space = fireball_top - gap_top
                             mario_bottom_space = gap_bottom - fireball_bottom
-                            if mario_top_space < bird_size + clearance_padding or \
-                               mario_bottom_space < bird_size + clearance_padding:
+                            if mario_top_space < bird_size or mario_bottom_space < bird_size:
                                 too_close_to_wall = True
                                 break
                     
@@ -1451,6 +1565,15 @@ class Game:
                         if wall.x > fireball_x - 500:  # Check walls in fireball's path
                             top_rect, bottom_rect = wall.get_rects()
                             gap_top, gap_bottom = wall.get_gap_area()
+                            gap_height = gap_bottom - gap_top
+                            
+                            # Adaptive clearance padding for path checking
+                            if gap_height >= 250:
+                                path_clearance = 25
+                            elif gap_height >= 230:
+                                path_clearance = 20
+                            else:
+                                path_clearance = 15
                             
                             # Check multiple positions along fireball's path
                             for check_x in range(int(fireball_x), int(fireball_x - 400), -20):
@@ -1460,12 +1583,13 @@ class Game:
                                     will_be_blocked = True
                                     break
                                 
-                                # If in gap, check clearance
+                                # If in gap, check clearance with adaptive padding
                                 if gap_top < fireball_y < gap_bottom:
+                                    safe_top = gap_top + path_clearance
+                                    safe_bottom = gap_bottom - path_clearance
                                     future_top = fireball_y - fireball_size // 2
                                     future_bottom = fireball_y + fireball_size // 2
-                                    if (future_top < gap_top + safe_margin or 
-                                        future_bottom > gap_bottom - safe_margin):
+                                    if future_top < safe_top or future_bottom > safe_bottom:
                                         will_be_blocked = True
                                         break
                             
@@ -1477,9 +1601,10 @@ class Game:
                     
                     # Check collision with enemies
                     too_close_to_enemy = False
+                    enemy_safe_margin = 40  # Fixed margin for enemy checking
                     for enemy in self.enemies:
                         if enemy.rect:
-                            enemy_check_rect = enemy.rect.inflate(safe_margin * 2, safe_margin * 2)
+                            enemy_check_rect = enemy.rect.inflate(enemy_safe_margin * 2, enemy_safe_margin * 2)
                             fireball_rect = pygame.Rect(fireball_x - fireball_size // 2, fireball_y - fireball_size // 2,
                                                       fireball_size, fireball_size)
                             if fireball_rect.colliderect(enemy_check_rect):
@@ -2154,14 +2279,19 @@ class Game:
         self.screen.blit(hs_shadow, hs_shadow_rect)
         self.screen.blit(hs_text, hs_rect)
         
-        # Level dropdown - positioned with proper spacing below high score
+        # Restart instruction - drawn FIRST so dropdown appears on top (higher z-index)
+        restart_text = self.font_small.render("Press SPACE to Restart", True, (255, 255, 255))
+        # Position restart text further down to avoid overlap with open dropdown
+        # Dropdown when open: button (40px) + 3 options (35px each = 105px) = 145px total
+        # Dropdown ends at: dropdown_y (85) + 145 = 230px from center
+        # Add gap of 25px for better spacing, so restart at: 230 + 25 = 255px from center
+        restart_rect = restart_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2 + 255))
+        self.screen.blit(restart_text, restart_rect)
+        
+        # Level dropdown - drawn AFTER restart text so it appears on top when open
+        # Positioned with proper spacing above restart text (accounting for dropdown height when open)
         dropdown_y = self.screen_height // 2 + 85
         self.draw_level_dropdown(dropdown_y)
-        
-        # Restart instruction - positioned below dropdown with proper spacing
-        restart_text = self.font_small.render("Press SPACE to Restart", True, (255, 255, 255))
-        restart_rect = restart_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2 + 140))
-        self.screen.blit(restart_text, restart_rect)
         
         # Draw volume controls
         self.draw_volume_controls()

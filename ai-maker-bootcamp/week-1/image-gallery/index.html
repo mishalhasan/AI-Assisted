@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fashion Gallery</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="gallery-container">
+        <!-- Minimal Filter Buttons -->
+        <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="portrait">Portrait</button>
+            <button class="filter-btn" data-filter="street">Street</button>
+            <button class="filter-btn" data-filter="runway">Editorial</button>
+        </div>
+
+        <!-- Gallery Grid -->
+        <div class="gallery-grid" id="galleryGrid">
+            <!-- Images will be dynamically loaded by JavaScript -->
+        </div>
+
+        <!-- Lightbox Modal -->
+        <div class="lightbox" id="lightbox">
+            <div class="lightbox-content">
+                <span class="close-btn" id="closeBtn">&times;</span>
+                <button class="nav-btn prev-btn" id="prevBtn">&#10094;</button>
+                <img src="" alt="Gallery Image" id="lightboxImg">
+                <button class="nav-btn next-btn" id="nextBtn">&#10095;</button>
+                <div class="image-counter" id="imageCounter"></div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

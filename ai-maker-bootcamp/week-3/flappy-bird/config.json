@@ -1,0 +1,48 @@
+{
+  "levels": [
+    {
+      "level": 1,
+      "name": "Easy",
+      "wall_speed": 2,
+      "enemy_speed": 1.5,
+      "wall_spawn_rate": 180,
+      "enemy_spawn_rate": 300,
+      "wall_gap_size": 250,
+      "wall_spacing": 450,
+      "gravity": 0.5,
+      "flap_strength": -8
+    },
+    {
+      "level": 2,
+      "name": "Medium",
+      "wall_speed": 3.2,
+      "enemy_speed": 2.2,
+      "wall_spawn_rate": 160,
+      "enemy_spawn_rate": 260,
+      "wall_gap_size": 240,
+      "wall_spacing": 400,
+      "gravity": 0.58,
+      "flap_strength": -8
+    },
+    {
+      "level": 3,
+      "name": "Hard",
+      "wall_speed": 4,
+      "enemy_speed": 2.5,
+      "wall_spawn_rate": 120,
+      "enemy_spawn_rate": 200,
+      "wall_gap_size": 210,
+      "wall_spacing": 350,
+      "gravity": 0.7,
+      "flap_strength": -7
+    }
+  ],
+  "screen_width": 800,
+  "screen_height": 600,
+  "bird_size": 75,
+  "wall_width": 100,
+  "enemy_size": 40,
+  "coin_size": 35,
+  "fireball_size": 40
+}
+

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fashion Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="fashion-header">
+            <div class="toggle-container">
+                <button class="toggle-btn active" id="calc-toggle" onclick="toggleView('calculator')">
+                    CALCULATOR
+                </button>
+                <button class="toggle-btn" id="outfit-toggle" onclick="toggleView('outfit')">
+                    STYLE ME
+                </button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Calculator Section -->
+            <section class="calculator-section active" id="calculator-section">
+                <h2>CALCULATOR</h2>
+                <div class="animation-container" id="animation-container"></div>
+                <div id="outfit-popup" class="outfit-popup">
+                    <div class="outfit-popup-content">
+                        <button class="close-popup" onclick="closeOutfitPopup()">×</button>
+                        <h3>YOUR OUTFIT</h3>
+                        <div id="popup-outfit-display"></div>
+                    </div>
+                </div>
+                <div class="calculator">
+                    <div class="display">
+                        <input type="text" id="display" readonly value="0">
+                    </div>
+                    <div class="buttons">
+                        <button class="btn operator" onclick="clearDisplay()">C</button>
+                        <button class="btn operator" onclick="deleteLast()">⌫</button>
+                        <button class="btn operator" onclick="appendToDisplay('/')">/</button>
+                        <button class="btn operator" onclick="appendToDisplay('*')">×</button>
+                        
+                        <button class="btn number" onclick="appendToDisplay('7')">7</button>
+                        <button class="btn number" onclick="appendToDisplay('8')">8</button>
+                        <button class="btn number" onclick="appendToDisplay('9')">9</button>
+                        <button class="btn operator" onclick="appendToDisplay('-')">-</button>
+                        
+                        <button class="btn number" onclick="appendToDisplay('4')">4</button>
+                        <button class="btn number" onclick="appendToDisplay('5')">5</button>
+                        <button class="btn number" onclick="appendToDisplay('6')">6</button>
+                        <button class="btn operator" onclick="appendToDisplay('+')">+</button>
+                        
+                        <button class="btn number" onclick="appendToDisplay('1')">1</button>
+                        <button class="btn number" onclick="appendToDisplay('2')">2</button>
+                        <button class="btn number" onclick="appendToDisplay('3')">3</button>
+                        <button class="btn equals" onclick="calculate()">=</button>
+                        
+                        <button class="btn number zero" onclick="appendToDisplay('0')">0</button>
+                        <button class="btn number" onclick="appendToDisplay('.')">.</button>
+                        <button class="fashion-rain-btn" onclick="startFashionRain()">✨</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Outfit Generator Section -->
+            <section class="outfit-section" id="outfit-section">
+                <h2>OUTFIT GENERATOR</h2>
+                <div class="outfit-generator">
+                    <div class="gender-selection">
+                        <p class="gender-label">SELECT STYLE</p>
+                        <div class="gender-buttons">
+                            <button class="gender-btn active" id="woman-btn" onclick="selectGender('woman')">
+                                WOMAN
+                            </button>
+                            <button class="gender-btn" id="man-btn" onclick="selectGender('man')">
+                                MAN
+                            </button>
+                        </div>
+                    </div>
+                    <button class="outfit-btn" onclick="generateOutfit()">
+                        GENERATE OUTFIT
+                    </button>
+                    <div id="outfit-display" class="outfit-display">
+                        <p class="placeholder">Select your style and generate a curated outfit</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
