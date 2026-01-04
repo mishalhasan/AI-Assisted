@@ -66,6 +66,8 @@ python main.py
 
 **Note:** Sound files (.wav) are included for game functionality. Video files are excluded from git tracking.
 
+**Documentation:** See `flappy-bird/README.md` for detailed game instructions, controls, and customization options.
+
 ---
 
 ### 📈 Multiple to Single CSV
@@ -95,6 +97,8 @@ python combine_csv.py
 Place multiple CSV files in the directory and run the script. The combined output will be saved as `combined_output.csv`.
 
 **Note:** Large CSV files are excluded from git tracking. Sample files are included for demonstration.
+
+**Documentation:** See `multiple-to-single-csv/README.md` for detailed usage examples and customization options.
 
 ---
 
@@ -128,6 +132,8 @@ python organize_files.py
 - **Other:** All other file types
 
 **Note:** Video files and large media files are excluded from git tracking to keep repository size manageable.
+
+**Documentation:** See `organize-folders-auto/README.md` for detailed usage instructions and customization guide.
 
 ---
 

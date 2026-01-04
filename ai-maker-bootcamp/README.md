@@ -8,6 +8,7 @@ Welcome to the AI Maker Bootcamp repository! This repository contains all projec
 - [Week 2: Full-Stack Development](#week-2-full-stack-development)
 - [Week 3: Python & Data Processing](#week-3-python--data-processing)
 - [Week 4: AI Agents & Microservices](#week-4-ai-agents--microservices)
+- [Week 5: Chrome Extensions](#week-5-chrome-extensions)
 - [Technologies Used](#technologies-used)
 - [Getting Started](#getting-started)
 
@@ -276,6 +277,70 @@ python joke.py
 
 ---
 
+## Week 5: Chrome Extensions
+
+Projects focused on building browser extensions with React and modern web technologies.
+
+### 🎈 AI Bubbles
+A fun and interactive Chrome extension that adds animated, colorful bubbles to any webpage.
+
+**Features:**
+- Animated bubbles with 12 vibrant colors
+- Interactive popup interface
+- Floating button on web pages
+- Smooth animations with randomized properties
+- Non-intrusive design
+
+**Location:** `week-5/ai-bubbles/`
+
+**Tech Stack:** React, Webpack, Chrome Extension Manifest V3, CSS Animations
+
+**Setup:**
+```bash
+cd week-5/ai-bubbles/codecademy-chrome-boiler-template
+npm install
+npm start
+```
+
+**Installation:**
+1. Build the extension: `npm run build`
+2. Load `build` folder in Chrome via `chrome://extensions/`
+3. Click extension icon or floating button to create bubbles
+
+---
+
+### 🤖 AI Summary (ExplainAIx)
+An AI-powered Chrome extension that summarizes webpage content with a single click.
+
+**Features:**
+- AI-powered summaries using GPT-4o-mini
+- One-click summarization
+- Save summaries for later reference
+- Copy & share functionality
+- Secure API key storage
+- Modern UI with Shadow DOM isolation
+
+**Location:** `week-5/ai-summary/`
+
+**Tech Stack:** React, Webpack, OpenAI API, Chrome Extension Manifest V3
+
+**Setup:**
+```bash
+cd week-5/ai-summary/codecademy-chrome-boiler-template
+npm install
+npm run build
+```
+
+**Installation:**
+1. Build the extension: `npm run build`
+2. Load `build` folder in Chrome via `chrome://extensions/`
+3. Configure OpenAI API key in extension popup
+4. Click circular button on any webpage to generate summary
+
+**Note:** Requires OpenAI API key (get one at [platform.openai.com](https://platform.openai.com/api-keys))
+
+---
+
 ## Technologies Used
 
 ### Frontend
@@ -305,6 +370,8 @@ python joke.py
 - Clerk (Authentication)
 - BeautifulSoup4
 - Pygame
+- Webpack
+- Chrome Extension APIs
 
 ---
 
@@ -340,6 +407,14 @@ python joke.py
    python [main-file].py
    ```
 
+4. **Chrome Extension Projects (Week 5):**
+   ```bash
+   cd week-5/[project-name]/codecademy-chrome-boiler-template
+   npm install
+   npm run build
+   # Then load the 'build' folder in Chrome via chrome://extensions/
+   ```
+
 ### Project Structure
 
 ```
@@ -356,10 +431,13 @@ ai-maker-bootcamp/
 │   ├── multiple-to-single-csv/
 │   ├── organize-folders-auto/
 │   └── website-scrape/
-└── week-4/              # AI agents & microservices
-    ├── agents/
-    │   └── newsletter_crew/
-    └── microservice/
+├── week-4/              # AI agents & microservices
+│   ├── agents/
+│   │   └── newsletter_crew/
+│   └── microservice/
+└── week-5/              # Chrome extensions
+    ├── ai-bubbles/
+    └── ai-summary/
 ```
 
 ---
